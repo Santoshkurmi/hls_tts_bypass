@@ -9,6 +9,8 @@ import time
 import os
 import mmap
 
+# requests tqdm pycryptodome
+
 def decrypt_video(file_path, key):
 
     # key = "4006957"
