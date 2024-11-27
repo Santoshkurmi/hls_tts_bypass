@@ -1,7 +1,7 @@
 import requests as req 
 import os
 import tqdm
-from Crypto.Cipher import AES
+from Crypto.Cipher import AES   #pip install pycryptodome
 from Crypto.Util.Padding import unpad
 import base64
 import re
