@@ -8,7 +8,7 @@ This is a report generated from testing the website https://harkiratapi.classx.c
 ## Bug lists
 - Bug1: Download encrypted video metadata file to play and share video in any browser locally without downloading and decrypting the actual video file.
 
-- Bug2: Download the video file and decrypt it too which is accessible to the android app (*100xdevs*) upto 720p resoultion . Currently zip file can be downloaded but not able to decrypt.
+- Bug2: Download the video file and decrypt it too upto 720p resoultion . Currently zip file can be downloaded but not able to decrypt.
 
 ## Bug1 reproduction:
  To download video metadata html, first we need access to following things
