@@ -105,6 +105,10 @@ def extract_key(url):
 
 
 def download_file(url, output_path):
+
+    if os.path.exists(output_path):
+        print(f"File {output_path} already exists. Ignoring download\n")
+        return 0
     # Send a GET request to the URL
     response = req.get(url, stream=True)
     
@@ -115,7 +119,7 @@ def download_file(url, output_path):
     total_size = int(response.headers.get('content-length', 0))
     
     # Open the output file in binary write mode
-    with open(output_path, "wb") as file:
+    with open(output_path+".progress", "wb") as file:
         # Create a progress bar with tqdm
         with tqdm.tqdm(total=total_size, unit="B", unit_scale=True, desc="Downloading") as progress_bar:
             # Write the file in chunks
@@ -125,6 +129,8 @@ def download_file(url, output_path):
                     file.write(chunk)
                     # Update the progress bar
                     progress_bar.update(len(chunk))
+    os.rename(output_path+".progress",output_path)
+    return 1
 
 
 def start():
@@ -153,7 +159,7 @@ def start():
             print(f"{c}. {title['Title']} | {title['material_type']}")
             c = c + 1
     
-        choice = input("\n\nEnter the choice: ")
+        choice = input("\nEnter the choice: ")
     else:
         choice = "1"
 
@@ -162,9 +168,14 @@ def start():
     titles = get_titles(cid,pid)
 
 
-    choice= input("\n\nChoose option: \n1. Download links only to play in browser\n2. Download videos and decrypt to play in any player\n=>")
+    choice= input("Choose option: \n1. Download links only to play in browser\n2. Download videos and decrypt to play in any player\n=>")
 
-
+    q_choice = input("Choose quality: \n0. All\n1. 240p\n2.360p \n3. 480p\n4. 720p\n=>")
+    quality_list = ["240p","360p","480p","720p"]
+    if q_choice=="0":
+        quality_sel = "*"
+    else:
+        quality_sel = quality_list[ int(q_choice)-1 ]
     if choice=="2":
         c=1
         for title in titles:
@@ -175,12 +186,23 @@ def start():
             enc_links = get_video_enc_links(cid,vid)
 
             for enc in enc_links:
+                
                 quality = enc["quality"]
                 path = decrypt_url(enc["path"])
+                enc_key = enc["key"]
+
+                if quality_sel !="*":
+                    if quality_sel != quality:
+                        continue
+
                 if "https" in path:
                     path_n = c_title+"/"+title["Title"]
                     ext = path.rsplit('.', 1)[-1] if '.' in path else "mkv"
-                    key =  extract_key(path)
+                    # key =  extract_key(path)
+                    if len(enc_key) >2:
+                        key = base64.b64decode( decrypt_url(enc_key) ).decode("utf-8")
+                    else:
+                        key = "abcdef"
                     
                     file = path_n+"/"+quality+" "+key+" ."+ext
                     # print(file)
@@ -188,14 +210,16 @@ def start():
                     
                     
                     if ext=="zip":
-                        print("Ignoring zip file download and decryption for now key is "+key)
+                        print("Ignoring zip file download and decryption for now key is "+key+"\n\n")
+                   
                     else:
                         os.makedirs(path_n, exist_ok=True)
-                        print("Downloading quality:"+quality)
-                        download_file(path,file)
-                        print("Decrypting the file with password "+key)
-                        decrypt_video(file,key)
-                        print("Done decrypting the file\n\n")
+                        print("Downloading quality:"+quality+" "+title['Title']+"."+ext)
+                        res = download_file(path,file)
+                        if res==1:
+                            print("Decrypting the file with password "+key)
+                            decrypt_video(file,key)
+                            print("Done decrypting the file\n\n")
 
                 # print(path)
 
@@ -234,13 +258,6 @@ def start():
 
             print("Waiting for 30 seconds to prevent rate limiting\n")
             time.sleep(30)
-
-            
-
-
-
-
-    
 
 
 start()
