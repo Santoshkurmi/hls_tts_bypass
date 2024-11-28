@@ -106,6 +106,24 @@ def extract_key(url):
         return match.group(0).split("-")[1]  # Return the matched string
     return None
 
+def watch_video(cid,vid):
+    headers2 = {
+    "Authorization":authorization,
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.86 Safari/537.36",
+    "Origin": "https://harkirat.classx.co.in",
+    "Host": "harkiratapi.classx.co.in",
+    "Sec-Ch-Ua-Platform": "Linux",
+    "Referer": "https://harkirat.classx.co.in/",
+    "Auth-Key": "appxapi"
+}
+    headers2["content-type"]="application/x-www-form-urlencoded"
+    data = f"user_id={user_id}&course_id={cid}&live_course_id={vid}&ytFlag=0&folder_wise_course=1"
+    try:
+        res = req.post(host+f"/post/watch_videov2",data=data,headers=headers2).json()
+        # print(res)
+    except Exception as e:
+        print(e)
+
 
 def download_file(url, output_path):
 
@@ -173,13 +191,14 @@ def start():
 
     choice= input("Choose option: \n1. Download links only to play in browser\n2. Download videos and decrypt to play in any player\n=>")
 
-    q_choice = input("Choose quality: \n0. All\n1. 240p\n2.360p \n3. 480p\n4. 720p\n=>")
-    quality_list = ["240p","360p","480p","720p"]
-    if q_choice=="0":
-        quality_sel = "*"
-    else:
-        quality_sel = quality_list[ int(q_choice)-1 ]
+    
     if choice=="2":
+        q_choice = input("Choose quality: \n0. All\n1. 240p\n2.360p \n3. 480p\n4. 720p\n=>")
+        quality_list = ["240p","360p","480p","720p"]
+        if q_choice=="0":
+            quality_sel = "*"
+        else:
+            quality_sel = quality_list[ int(q_choice)-1 ]
         c=1
         for title in titles:
             print(f"{c}. {title['Title']} | {title['material_type']}")
@@ -244,6 +263,7 @@ def start():
             # vid = titles[int(choice)-1]["id"]
 
             vtoken = get_video_token(cid,vid)
+            watch_video(cid,vid)
             # print(vtoken)
             # print(cookie)
 

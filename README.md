@@ -78,7 +78,7 @@ header should be like this similar
 
  Make sure to not send many request to this endpoint in short interval, it has rate limiting. Once you cross the limit, it will respond with Token Expired. After few hours again everything will work.
 
-To get video html without rate limiting, set the interval to each request to more than 1 minute or so.
+To get video html without rate limiting, set the interval to each request to few minutes or longer and leave the script running.
 
 By the way rate limiting here doesnot prevent from downloading all the video html file.Sending request in few minute delay for each video will work.
 
