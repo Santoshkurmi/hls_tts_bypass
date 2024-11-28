@@ -9,6 +9,13 @@ import time
 import os
 import mmap
 
+
+user_id = "74312"
+authorization = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6Ijc0MzEyIiwiZW1haWwiOiJraHVtYXBva2hhcmVsMjA3OEBnbWFpbC5jb20iLCJ0aW1lc3RhbXAiOjE3MzI2NDIyNzR9.Wz2iUOpyMzmuo_bi0PV-eu7JgnVVHFXj3PS4SagtmYQ"
+
+host = "https://harkiratapi.classx.co.in"
+
+
 # requests tqdm pycryptodome
 
 def decrypt_video(file_path, key):
@@ -54,10 +61,6 @@ def decrypt_url(encrypted_string, key="638udh3829162018"):
     # Convert the decrypted bytes to a string
     return decrypted_data.decode("utf-8")
 
-
-authorization = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6Ijc0MzEyIiwiZW1haWwiOiJraHVtYXBva2hhcmVsMjA3OEBnbWFpbC5jb20iLCJ0aW1lc3RhbXAiOjE3MzI2NDIyNzR9.Wz2iUOpyMzmuo_bi0PV-eu7JgnVVHFXj3PS4SagtmYQ"
-host = "https://harkiratapi.classx.co.in"
-user_id = "74312"
 
 headers = {
     "Authorization":authorization,
@@ -211,7 +214,10 @@ def start():
                     
                     if ext=="zip":
                         print("Ignoring zip file download and decryption for now key is "+key+"\n\n")
-                   
+                        # os.makedirs(path_n, exist_ok=True)
+                        # print("Downloading quality:"+quality+" "+title['Title']+"."+ext)
+
+                        # res = download_file(path,file)
                     else:
                         os.makedirs(path_n, exist_ok=True)
                         print("Downloading quality:"+quality+" "+title['Title']+"."+ext)
