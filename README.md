@@ -92,15 +92,15 @@ From my testing, i am able to download all the html file of videos of the course
  - The json have *kstr* and *jstr* may be fullform as key string and json string. The jstr has encrypted data for each video quality. I have not found the decryption mechanism but it seem kstr is used as a key to decrypt the jstr.
  
 
- But we don't need to decrypt the jstr to get file meta data. I am sure even after decrypting jstr, we will have to again decrypt all teh video segment too present in the decrypted data.
+ - But we don't need to decrypt the jstr to get file meta data. I am sure even after decrypting jstr, we will have to again decrypt all teh video segment too present in the decrypted data.
 
- The bug is that, once I have this html response having kstr and jstr , i can save it to a file. Modify the relative path with absoulte path of some scripts and css as running in locally the html file, the domain is localhost so.
+ - The bug is that, once I have this html response having kstr and jstr , i can save it to a file. Modify the relative path with absoulte path of some scripts and css as running in locally the html file, the domain is localhost so.
 
- - Make sure to replace relative url with absoulte in the he tml of above otherwise running locally won't work. The browser will show empty white page only.
+ - Make sure to replace relative url with absoulte in the html of above otherwise running locally won't work. The browser will show empty white page only.
 
- After downloading the html returned by that api call, it can be used to watch video. This file can be shared with other too. No need to login. We dont have to download video, we can use only this html and watch all quality of videos with it.
+ - After downloading the html returned by that api call, it can be used to watch video. This file can be shared with other too. No need to login. We dont have to download video, we can use only this html and watch all quality of videos with it.
 
- I have python script that perform all this task and save all video html file to access and share later. The html files can be embeded in android or windows app like flutter too for easy access without manually opening each html file in browser or using live server. The files generated are saved in "courses" directory.
+ - I have python script that perform all this task and save all video html file to access and share later. The html files can be embeded in android or windows app like flutter too for easy access without manually opening each html file in browser or using live server. The files generated are saved in "courses" directory.
 
  #### Fix of bug1
  This bug can be fixed by expiring the video after few minutes. Once expire, it need to access user token againt to play the video.
