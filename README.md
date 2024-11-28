@@ -38,7 +38,7 @@ header should be like this similar
 ```
 
  Send this get request in the api endpoint
- ```json
+ ```
  /get/get_all_purchases?userid={user_id}&item_type=10 
  ```
  in place of user_id place the user_id of the user.
@@ -50,7 +50,7 @@ header should be like this similar
  We need to have access to parent id of the course which you want to see the videos.
 
  To get the parent id, send this request
- ```json
+ ```
  /get/folder_contentsv2?course_id={course_id}&parent_id=-1
  ```
  here, place course_id and parent_id to -1.
@@ -65,7 +65,7 @@ header should be like this similar
  Token is required for each video id to access the video.
  
  Send this request to get token id. Also for second bug, it provides link to download video too up to 720p
- ```json
+ ```
  /get/fetchVideoDetailsById?course_id={cid}&video_id={vid}&ytflag=0&folder_wise_course=1
  ```
 
@@ -119,7 +119,7 @@ For now, I am not able to decrypt zip file as it contains m3u8 with encrypted ts
  
  Send this request to get encypted_links for each quality up to 720p. We don't need video token returned by it as the token is used in first bug to play in browser.
 
- ```json
+ ```
  /get/fetchVideoDetailsById?course_id={cid}&video_id={vid}&ytflag=0&folder_wise_course=1
  ```
 
@@ -201,7 +201,7 @@ def decrypt_video(file_path, key):
 
  zip file link  are encrypted using AES-128 using key, to get key, we have to send request to endpoint with the URI present in the m3u8. But it seem the key is not working.
 
- ```json 
+ ```python 
  url = "https://harkiratapi.akamai.net.in/post/generate_key_session"
 
 data = {"url":"https://appx-transcoded-videos-mcdn.akamai.net.in/videos/harkirat-data/164118-1732615576/encrypted-1e52ca/720p.zip",
@@ -212,5 +212,5 @@ data = {"url":"https://appx-transcoded-videos-mcdn.akamai.net.in/videos/harkirat
  ck_placer is URI of the m3u8 file after extracting .zip file. 
 
  
-
+That's all for now.
  
