@@ -3,214 +3,282 @@
 
 This is a report generated from testing the website https://harkiratapi.classx.co.in and its dependency domain.
 
- in the github, html_old folder contains html file of video for course Complete Web development + Devops Cohort to test for it. You can also run the script to perform downloading of html and video using both bug.
+ In the github, 'courses folder contains html files and videos for course 'Complete Web development + Devops Cohort' to test for it. 
+ 
+ I have downloaded video for only few seconds only about 30 segments of each video having quality 1080p. There is a script 'main.py' for performing everything in the report easily automating everything in python.
 
-## Bug lists
-- Bug1: Download encrypted video metadata file to play and share video in any browser locally without downloading and decrypting the actual video file.
+ This is tested only on this course: 'Complete Web development + Devops Cohort'
+ So for other course, there may be slight differences. I don't have those courses so I cant test on them.
 
-- Bug2: Download the video file and decrypt it too upto 720p resoultion . Currently zip file can be downloaded but not able to decrypt.
+### Screenshots
+ ![playing video locally](./screenshots/play.png)
+ This is playing video in vlc after downloaidng using the script.
+
+  ![Running script main](./screenshots/main.png)
+ This is running script 'main.py' with two paramter :1st no. of segment to download for testing i  used to download only 30, 2nd is no of thread to use to download multiple segment at once.
+
+
+  ![Running script main](./screenshots/test.png)
+ This is running script 'test.py' with two paramter :1st file path the html of the video and second no of segment to download for testing, i have used 5 in screenshot.
+
+ This script is used to download video if we have already html file available.
+
+
+
+
+## Bugs
+ I am able to download all encrypted videos of all  quality of the course i have purchased.
+ Also without even downloading, i can share all the videos with anyone saving storage cost and transfer speed.
+
+ So it has two bugs:
+ 1. Play and share videos by getting the html of the video file(No need to download any video)
+ 2. Download videos in all formats and decrypt it too.
+
+ First bug is more severe than the second one as downloading huge size video, then sending need storage, faster speed and time.
+
+## Consequences:
+ The user who has bought the course can download all the vidoes or without downloading  share it for piracy.
+
+## Solution:
+ - First bug can be solved by implementing proper token validation and expiration of token in the server side.
+ - Second bug can never be solved by just using encryption as anyone can always debug how the javascript is decrypting the video unless you use hls drm protection.
 
 ## Bug1 reproduction:
- To download video metadata html, first we need access to following things
- - course id
- - parent id
- - video id
- - token of video id
 
+[Please click here](./Bug1.md) to see the step to reproduce the first bug of getting html file to play video.
 
+By the way, i have reported the first bug earlier, they responded saying it will auto expire after playing it few times. But now I am able to download videos too by decrpting the video metadata, so I know for sure, there is no mechanism like that. There is no expiry system implemented and the video can be played any number of time and any duration of time.
 
- #### Course Id
+## Bug2 reproduction
+ For bug2, we need the html file of the video, to get that follow the bug1 reproduction step to get the html file.
 
-host = "https://harkiratapi.classx.co.in"
+ ### What's in the html file
+    The html file contains html and javascript code build using Express server.
 
-header should be like this similar
-```json
-{
-    "Authorization":authorization,
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.86 Safari/537.36",
-    "Origin": "https://harkirat.classx.co.in",
-    "Host": "harkiratapi.classx.co.in",
-    "Sec-Ch-Ua-Platform": "Linux",
-    "Referer": "https://harkirat.classx.co.in/",
-    "Auth-Key": "appxapi"
-}
+    It's body contains a script tag having json data which is common in express.
+
+    The json looks something like this
+    ```json
+    {
+        "props":{
+        "pageProps":{
+        "token":"f9c37531f7fff3e59f5d7222807ddb8e","watermark":"",
+        "urls":[
+            {"bitrate":"1080p","quality":"1080p","path":"https://appx-static.akamai.net.in/testing/ck-master.m3u8?quality=1080p","backup_url":"","backup_url2":"","kstr":"ofCJet/jv4whmoOx4lePOcmjIkPpxVt4P9MSxNjmj8A=","jstr":"Here the video m3u8 encrypted"},
+
+            {"bitrate":"720p","quality":"720pp","path":"https://appx-static.akamai.net.in/testing/ck-master.m3u8?quality=720pp","backup_url":"","backup_url2":"","kstr":"ofCJet/jv4whmoOx4lePOcmjIkPpxVt4P9MSxNjmj8A=","jstr":"..."}],
+
+            ,"isMobile":false,"isIos":false,"isLive":false,"quality":"720p","isPremier":"0","startDate":"","gcp_cookie":"",
+
+            "datetime":"1734543680268",
+            "ivb6":"nU1tCk8NtILJrLqndImffQ==",
+            "enable_adaptivebitrate":0,"uhs_version":2},"__N_SSP":true},"page":"/secure-player","query":{"token":"f9c37531f7fff3e59f5d7222807ddb8e","watermark":""},"buildId":"vwKQXKVT-5n-Zj2R-SYja","isFallback":false,"gssp":true,"appGip":true,"scriptLoader":[]}
+
+    ```
+
+    In there, the important data is in 'urls' that have arrays of all quality of video details like bitrate,quality,path, and mainly kstr and jstr.
+
+    - kstr: It is the encrypted key use to decrypt the AES-128 video decryption.(Sadly the key itself is encrypted)
+
+    - jstr: It contains the m3u8 file of the video quality that contains all segments of the video,iv, urls etc(This is also encrypted)
+
+    Task is very simple, decrypt the jstr,kstr  and then download each segments , decrypt them and combine them.
+
+    let talk step by step, before that, list of things that are needed from the above json are
+    : token, kstr,jstr,datetime,ivb6
+
+### Finding the key to decrypt the jstr and kstr.
+
+To find the key that can be used to decrypt the jstr and kstr is done by using the token and datetime from the above json.
+
+algorith is given below in python.It returns 16,24,32 bit binary key based on the timestamp.
+
+```python
+def get_data_enc_key(time_val,token):
+    # Extract parts of the string
+    n = time_val[-4:]  # Last 4 characters of time_val
+    r = int(n[0])  # First character of n as an integer
+    i = int(n[1:3])  # Next two characters of n as an integer
+    o = int(n[3])  # Last character of n as an integer
+    
+    # Create the new string
+    a = time_val + token[r:i]
+    
+    # Create SHA-256 hash
+    s = hashlib.sha256()
+    s.update(a.encode('utf-8'))
+    c = s.digest()
+    
+    # Determine the sign based on the value of o
+    if o == 6:
+        sign = c[:16]  # First 16 bytes
+    elif o == 7:
+        sign = c[:24]  # First 24 bytes
+    else:
+        sign = c  # Entire hash
+
+    key = base64.b64encode(sign).decode('utf-8')
+    
+    return key
 
 ```
-
- Send this get request in the api endpoint
- ```
- /get/get_all_purchases?userid={user_id}&item_type=10 
- ```
- in place of user_id place the user_id of the user.
-
- It returns all courses user has purchased.
- Make sure you add authorization headers token in the request. We get course id from this for all the courses.
-
- #### parent id
- We need to have access to parent id of the course which you want to see the videos.
-
- To get the parent id, send this request
- ```
- /get/folder_contentsv2?course_id={course_id}&parent_id=-1
- ```
- here, place course_id and parent_id to -1.
- It will return list of parent mainly single one. We just need the id of teh response parents.
-
- #### video ids
- Send the same request as above of parent id, insted of parent_id=-1, replace with the actual parent id found above.
-
- It will return all the videos with its id of that course.
-
- #### token for video
- Token is required for each video id to access the video.
- 
- Send this request to get token id. Also for second bug, it provides link to download video too up to 720p
- ```
- /get/fetchVideoDetailsById?course_id={cid}&video_id={vid}&ytflag=0&folder_wise_course=1
- ```
-
- #### Last Step
- After getting all the neccessary details, at last we only need the token id of the above step and send this request to get the video metadata.
-
- ```
- https://player.akamai.net.in/secure-player?token={token}&watermark=
- ```
-
- Make sure to not send many request to this endpoint in short interval, it has rate limiting. Once you cross the limit, it will respond with Token Expired. After few hours again everything will work.
-
-To get video html without rate limiting, set the interval to each request to few minutes or longer and leave the script running.
-
-By the way rate limiting here doesnot prevent from downloading all the video html file.Sending request in few minute delay for each video will work.
-
-From my testing, i am able to download all the html file of videos of the course in few minutes.
-
- This is not the actual domain as video player is handled by other domain. 
-
- set token in the token part of teh video, leave watermark empty if you dont want watermark in video.
-
- - It returns html file in which it has script tag having json.
- - The json have *kstr* and *jstr* may be fullform as key string and json string. The jstr has encrypted data for each video quality. I have not found the decryption mechanism but it seem kstr is used as a key to decrypt the jstr.
- 
-
- - But we don't need to decrypt the jstr to get file meta data. I am sure even after decrypting jstr, we will have to again decrypt all teh video segment too present in the decrypted data.
-
- - The bug is that, once I have this html response having kstr and jstr , i can save it to a file. Modify the relative path with absoulte path of some scripts and css as running in locally the html file, the domain is localhost so.
-
- - Make sure to replace relative url with absoulte in the html of above otherwise running locally won't work. The browser will show empty white page only.
-
- - After downloading the html returned by that api call, it can be used to watch video. This file can be shared with other too. No need to login. We dont have to download video, we can use only this html and watch all quality of videos with it.
-
- - I have python script that perform all this task and save all video html file to access and share later. The html files can be embeded in android or windows app like flutter too for easy access without manually opening each html file in browser or using live server. The files generated are saved in "courses" directory.
-
- #### Fix of bug1
- This bug can be fixed by expiring the video after few minutes. Once expire, it need to access user token againt to play the video.
-
- But in the website, once the html file is downloaed, no further validation is taking place, no authorization as well as no token expiration seem to be working.
-
- I dont know how long the html file is valid, but in my observation ,it been 2 days still all the html files are playing well in any browser without login or anyting.
+time_val parameter is timestamp and token is token from the json of the html file.
 
 
-## Bug 2:
-In this bug, the video can be downloaded and decrypted too.
-For now, I am not able to decrypt zip file as it contains m3u8 with encrypted tse. I am sure with enough testing, the step to decrypt zip file video too will also be found.
+### Decrypting the jstr and kstr.
 
-- We need to send this request to get encrypted links of video that can be downloaded.
-
- 
- Send this request to get encypted_links for each quality up to 720p. We don't need video token returned by it as the token is used in first bug to play in browser.
-
- ```
- /get/fetchVideoDetailsById?course_id={cid}&video_id={vid}&ytflag=0&folder_wise_course=1
- ```
-
- It returns encrypted links for each quality up to 720p, having path,key.
-
- - path is the encypted link to download the file
- - key is the key to decrypt the video
-
- #### Decryption of path and key
- Both path and key are encypted too. To decrypt it we have to use AES decryption algorith which is illustrated using python code below
- ```python
-def decrypt_url(encrypted_string, key="638udh3829162018"):
-    # Split the input string into ciphertext and IV
-    split = encrypted_string.split(":")
-    if len(split) != 2:
-        return None
-    # Decode the Base64-encoded IV and ciphertext
-    iv = base64.b64decode(split[1])
-    encrypted_data = base64.b64decode(split[0])
+```python
+def decrypt_data(data,key,ivb):
+    i = b64decode(key)  # Key got from get_data_enc_key()
+    o = b64decode(ivb)  # Initialization Vector (IV)
+    a = b64decode(data)  # Encrypted data
     
-    # Create an AES cipher with the provided key and IV
-    cipher = AES.new(key.encode('ISO-8859-1'), AES.MODE_CBC, iv)
+    # Create AES Cipher object
+    cipher = AES.new(i, AES.MODE_CBC, o)
     
-    # Decrypt the data and unpad the result
-    decrypted_data = unpad(cipher.decrypt(encrypted_data), AES.block_size)
+    # Decrypt the data
+    l = cipher.decrypt(a)
     
-    # Convert the decrypted bytes to a string
-    return decrypted_data.decode("utf-8")
+    # Convert decrypted data to a UTF-8 string
+    dec = l.decode('utf-8')
+
+    # Return the decrypted string
+    return dec
+
+```
+data: it can be jstr and kstr. Same AES algorith is used to encrypt both.
+
+key: The key found from the above step
+ivb: ivb from the json
+
+
+ From this we will get both the key to decrypt the video as well as m3u8 file. Use this for all video quality if you want.
+
+
+ ### Decrypt first layer encryption of video segments
+ Once we have the decrypted jstr, we have m3u8 having all segments, it is encypted using AES-128 but before that it is also encrypted using simple shift,xor manipulation.
+
+ So first we have to decrypt using the simple method of obfuscation. The m3u8 segments can be in any following extensions:
+
+ tsa,tsb,tsc,tsd,tse
+
+ m3u8 decrypted from jstr looks like this
+
+ ```m3u8
+ #EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-KEY:METHOD=AES-128,URI="url from where to fetch the key",IV=0xa65c79d2237b4a594bc17047c7272f8b
+#EXTINF:5.933333,
+https://appx-transcoded-videos-mcdn.akamai.net.in/videos/harkirat-data/85929-1722860925/hls-drm-37ade3/720p/master-5673378.839810446-0.tse
+#EXTINF:4.166667,
+https://appx-transcoded-videos-mcdn.akamai.net.in/videos/harkirat-data/85929-1722860925/hls-drm-37ade3/720p/master-5673378.839810446-1.tse
+#EXTINF:4.166667,
+https://appx-transcoded-videos-mcdn.akamai.net.in/videos/harkirat-data/85929-1722860925/hls-drm-37ade3/720p/master-5673378.839810446-2.tse
+#EXTINF:4.166667,
 
  ```
- "638udh3829162018" this is the key used to encrypt the link and path.By the way this key is used to decrypt the key of the response.
 
- I mean video is encryped by key and that key is again encypted by another key which is 638udh3829162018
+ Also, the URI path which is used to get key of the video by sending request is not used. Instead the jstr key is used returned in the html.
 
- This return the decrypted path as well as key passing in the function.
+ May be for some video(Not in the course i have tested), they may be use URI for key if kstr is not present in the html.
 
- The key need to be decoded againt to base64 which get converted into few digit number only.
-
- Now we have decrypted path and actual key to decrypt the video.
-
- The algorith uses XOR operation on the video with the key above in the first 28 bit of the video. I think it is encrypting only the meta data file of the video so that other player won't recognize the video. This also make the encyption and decryption faster.
+ So far i have not encountered any other format, if found, then skip the first decryption process.  To decrypt each segments after downloading,use this function for each type of extension for all the segments.
 
  ```python
-
-def decrypt_video(file_path, key):
-
-    # key = "4006957"
-    with open(file_path, "r+b") as f:
-        file_size = os.path.getsize(file_path)
+ def decode_video_tsa(input_string):
+    shift_value = 0xa * 0x2  # 3 in decimal
+    result = ''
+    
+    for char in input_string:
+        char_code = ord(char)  # Get the Unicode code point of the character
+        xor_result = char_code -shift_value  
+        result += chr(xor_result)  # Convert back to a character and append to the result
         
-        # Determine the length to process (minimum of file size or 28 bytes)
-        length = min(file_size, 28)
+    binary_data = base64.b64decode(result)
+
+    return binary_data
+
+
+def decode_video_tsb(input_string):
+    xor_value = 0x3  # 42 in decimal
+    shift_value = 0x2a  # 3 in decimal
+    result = ''
+    
+    for char in input_string:
+        char_code = ord(char)  # Get the Unicode code point of the character
+        xor_result = char_code >> xor_value  
+        shifted_result = xor_result ^ shift_value  
+        result += chr(shifted_result)  # Convert back to a character and append to the result
         
-        # Memory-map the file
-        with mmap.mmap(f.fileno(), length, access=mmap.ACCESS_WRITE) as mm:
-            # Iterate through the mapped file
-            for i in range(length):
-                # Read a byte
-                byte = mm[i]
-                
-                # Modify the byte
-                if i <= len(key) -1:
-                    modified_byte = ord(key[i]) ^ byte
-                else:
-                    modified_byte = byte ^ i
-                
-                # Write the modified byte back
-                mm[i] = modified_byte
+    binary_data = base64.b64decode(result)
+
+    return binary_data
+
+def decode_video_tsc(input_string):
+    shift_value = 0xa  # 3 in decimal
+    result = ''
+    
+    for char in input_string:
+        char_code = ord(char)  # Get the Unicode code point of the character
+        xor_result = char_code - shift_value  
+        result += chr(xor_result) 
+        
+    binary_data = base64.b64decode(result)
+
+    return binary_data
+
+def decode_video_tsd(input_string):
+    shift_value = 0x2  # 3 in decimal
+    result = ''
+    
+    for char in input_string:
+        char_code = ord(char)  # Get the Unicode code point of the character
+        # xor_result = char_code ^ shift_value  # Perform XOR with the constant
+        shifted_result = char_code >> shift_value  
+        result += chr(shifted_result)  
+    binary_data = base64.b64decode(result)
+
+    return binary_data
+
+
+def decode_video_tse(input_string):
+    xor_value = 0x3  # 42 in decimal
+    shift_value = 0x2a  # 3 in decimal
+    result = ''
+    
+    for char in input_string:
+        char_code = ord(char)  # Get the Unicode code point of the character
+        xor_result = char_code ^ shift_value  
+        shifted_result = xor_result >> xor_value  
+        result += chr(shifted_result)  # Convert back to a character and append to the result
+        
+    binary_data = base64.b64decode(result)
+
+    return binary_data
+
 
  ```
- This read the file using mmap to load file in memory to do the xor operation with the key. Algorithm is preety simple to understand from the code. Applying the same algorith again encrypt it. This is the power of xor algorithm encryption.
 
- This is used to decrypt .mkv,.mp4 or other video format link but not .zip as .zip file contains m3u8 and tse file.
+ For each extension , use the approriate function.
 
- This feature too is implemented in the python script. Running the python main.py , it will shows all the courses purchased by the user, choice to download html using bug1 method or video using bug2.
+ input_string: all the content return by downloading each segment url.
+
+ Do this decryption for all the segments after downloading.
 
 
- Make sure set token and user_id variable of the script and install neccessary module.
+ ### Decrypt second layer encryption
+ The second is simple standard hls encryption using AES-128. For that we need decrypted kstr which we have and iv which we can get from the m3u8.
 
- zip file link  are encrypted using AES-128 using key, to get key, we have to send request to endpoint with the URI present in the m3u8. But it seem the key is not working.
-
- ```python 
- url = "https://harkiratapi.akamai.net.in/post/generate_key_session"
-
-data = {"url":"https://appx-transcoded-videos-mcdn.akamai.net.in/videos/harkirat-data/164118-1732615576/encrypted-1e52ca/720p.zip",
-"is_ios":"0",
-"ck_placer":"1732618042-728703"}
+ ```python3
+    cipher = AES.new(kstr, AES.MODE_CBC, iv)
+    segment_data = cipher.decrypt(segment_data)
 
  ```
- ck_placer is URI of the m3u8 file after extracting .zip file. 
+ kstr is decrypted kstr which is key to decrypt the video segment and iv is iv which we can get from m3u8.
 
- 
-That's all for now.
+ Combine all the segments video and thats all.
+
  
