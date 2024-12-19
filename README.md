@@ -32,7 +32,12 @@ This is a report generated from testing the website https://harkiratapi.classx.c
 
  So it has two bugs:
  1. Play and share videos by getting the html of the video file(No need to download any video)
- 2. Download videos in all formats and decrypt it too.
+
+You might say there is token expiration after playing it few times. Right?. But I am not talking about this. The expiration of token works to get the html file of the video that has all the video metadata. Once I get that file(html) having all the metadata, there is no need of token, any authorization at all. I can play video by live serving that html file locally saving in the computer.
+
+So the bug is,once I get the video html file where video is playing, then there is no expiration system. By the way, you have to save the video html file locally and then run it locally.  Copying the link from the browser for that video won't work as it will again fetch the video metadata where there is token expiration.
+  
+ 3. Download videos in all formats and decrypt it too.
 
  First bug is more severe than the second one as downloading huge size video, then sending need storage, faster speed and time.
 
