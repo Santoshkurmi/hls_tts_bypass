@@ -3,12 +3,9 @@
 
 This is a report generated from testing the website https://harkiratapi.classx.co.in and its dependency domain.
 
- in the github, html_old folder contains html file of video for course Complete Web development + Devops Cohort to test for it. You can also run the script to perform downloading of html and video using both bug.
 
-## Bug lists
 - Bug1: Download encrypted video metadata file to play and share video in any browser locally without downloading and decrypting the actual video file.
 
-- Bug2: Download the video file and decrypt it too upto 720p resoultion . Currently zip file can be downloaded but not able to decrypt.
 
 ## Bug1 reproduction:
  To download video metadata html, first we need access to following things
@@ -107,110 +104,10 @@ From my testing, i am able to download all the html file of videos of the course
 
  But in the website, once the html file is downloaed, no further validation is taking place, no authorization as well as no token expiration seem to be working.
 
- I dont know how long the html file is valid, but in my observation ,it been 2 days still all the html files are playing well in any browser without login or anyting.
+ After understanding how the video is encrypted and decrypted and played, this html file is not expired.
 
+ The javascript files embeded in the head of the html file will not work if the server has build the javascript again, as the name of the javascript changed. 
 
-## Bug 2:
-In this bug, the video can be downloaded and decrypted too.
-For now, I am not able to decrypt zip file as it contains m3u8 with encrypted tse. I am sure with enough testing, the step to decrypt zip file video too will also be found.
+ Either download all the javascript locally and link it ,doing this will work all the time.
+ or else just update the javascript file seeing the new html.
 
-- We need to send this request to get encrypted links of video that can be downloaded.
-
- 
- Send this request to get encypted_links for each quality up to 720p. We don't need video token returned by it as the token is used in first bug to play in browser.
-
- ```
- /get/fetchVideoDetailsById?course_id={cid}&video_id={vid}&ytflag=0&folder_wise_course=1
- ```
-
- It returns encrypted links for each quality up to 720p, having path,key.
-
- - path is the encypted link to download the file
- - key is the key to decrypt the video
-
- #### Decryption of path and key
- Both path and key are encypted too. To decrypt it we have to use AES decryption algorith which is illustrated using python code below
- ```python
-def decrypt_url(encrypted_string, key="638udh3829162018"):
-    # Split the input string into ciphertext and IV
-    split = encrypted_string.split(":")
-    if len(split) != 2:
-        return None
-    # Decode the Base64-encoded IV and ciphertext
-    iv = base64.b64decode(split[1])
-    encrypted_data = base64.b64decode(split[0])
-    
-    # Create an AES cipher with the provided key and IV
-    cipher = AES.new(key.encode('ISO-8859-1'), AES.MODE_CBC, iv)
-    
-    # Decrypt the data and unpad the result
-    decrypted_data = unpad(cipher.decrypt(encrypted_data), AES.block_size)
-    
-    # Convert the decrypted bytes to a string
-    return decrypted_data.decode("utf-8")
-
- ```
- "638udh3829162018" this is the key used to encrypt the link and path.By the way this key is used to decrypt the key of the response.
-
- I mean video is encryped by key and that key is again encypted by another key which is 638udh3829162018
-
- This return the decrypted path as well as key passing in the function.
-
- The key need to be decoded againt to base64 which get converted into few digit number only.
-
- Now we have decrypted path and actual key to decrypt the video.
-
- The algorith uses XOR operation on the video with the key above in the first 28 bit of the video. I think it is encrypting only the meta data file of the video so that other player won't recognize the video. This also make the encyption and decryption faster.
-
- ```python
-
-def decrypt_video(file_path, key):
-
-    # key = "4006957"
-    with open(file_path, "r+b") as f:
-        file_size = os.path.getsize(file_path)
-        
-        # Determine the length to process (minimum of file size or 28 bytes)
-        length = min(file_size, 28)
-        
-        # Memory-map the file
-        with mmap.mmap(f.fileno(), length, access=mmap.ACCESS_WRITE) as mm:
-            # Iterate through the mapped file
-            for i in range(length):
-                # Read a byte
-                byte = mm[i]
-                
-                # Modify the byte
-                if i <= len(key) -1:
-                    modified_byte = ord(key[i]) ^ byte
-                else:
-                    modified_byte = byte ^ i
-                
-                # Write the modified byte back
-                mm[i] = modified_byte
-
- ```
- This read the file using mmap to load file in memory to do the xor operation with the key. Algorithm is preety simple to understand from the code. Applying the same algorith again encrypt it. This is the power of xor algorithm encryption.
-
- This is used to decrypt .mkv,.mp4 or other video format link but not .zip as .zip file contains m3u8 and tse file.
-
- This feature too is implemented in the python script. Running the python main.py , it will shows all the courses purchased by the user, choice to download html using bug1 method or video using bug2.
-
-
- Make sure set token and user_id variable of the script and install neccessary module.
-
- zip file link  are encrypted using AES-128 using key, to get key, we have to send request to endpoint with the URI present in the m3u8. But it seem the key is not working.
-
- ```python 
- url = "https://harkiratapi.akamai.net.in/post/generate_key_session"
-
-data = {"url":"https://appx-transcoded-videos-mcdn.akamai.net.in/videos/harkirat-data/164118-1732615576/encrypted-1e52ca/720p.zip",
-"is_ios":"0",
-"ck_placer":"1732618042-728703"}
-
- ```
- ck_placer is URI of the m3u8 file after extracting .zip file. 
-
- 
-That's all for now.
- 
